@@ -8,7 +8,11 @@
 </head>
 <body>
     <div id="app">
-        {{ message }}
+        <label>
+            玩家ID:
+            <input type="text" :value="playerId">
+            <button @click="matchPlayer">匹配</button>
+        </label>
     </div>
 
     <script>
@@ -17,6 +21,7 @@
             data: {
                 message: 'Hello Vue',
                 websock: null,
+                playerId: 'player_' + Math.round(Math.random() * 1000),
             },
             created(){
                 this.initWebSocket();
@@ -25,8 +30,12 @@
                 this.websock.close();
             },
             methods: {
+                matchPlayer(){
+                    let actions = {"code":600};
+                    this.websocketonsend(actions);
+                },
                 initWebSocket(){
-                    const wsurl = 'ws://192.168.10.10:8501';
+                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;
@@ -34,8 +43,6 @@
                     this.websock.onclose = this.websocketonclose;
                 },
                 websocketonopen(){
-                    let actions = {"test":"123456"};
-                    this.websocketonsend(actions);
                 },
                 websocketonmessage(e){
                     console.log(e.data);
