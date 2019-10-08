@@ -1,0 +1,9 @@
+{
+    "name": "vagrant/hide-and-seek",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "App\\" :  "app"
+        }
+    }
+}
