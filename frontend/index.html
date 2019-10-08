@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HideAndSeek</title>
+    <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <link rel="icon" href="data:;base64,=">
+</head>
+<body>
+    <div id="app">
+        {{ message }}
+    </div>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: 'Hello Vue',
+                websock: null,
+            },
+            created(){
+                this.initWebSocket();
+            },
+            destroyed() {
+                this.websock.close();
+            },
+            methods: {
+                initWebSocket(){
+                    const wsurl = 'ws://192.168.10.10:8501';
+                    this.websock = new WebSocket(wsurl);
+                    this.websock.onmessage = this.websocketonmessage;
+                    this.websock.onopen = this.websocketonopen;
+                    this.websock.onerror = this.websocketonerror;
+                    this.websock.onclose = this.websocketonclose;
+                },
+                websocketonopen(){
+                    let actions = {"test":"123456"};
+                    this.websocketonsend(actions);
+                },
+                websocketonmessage(e){
+                    console.log(e.data);
+                },
+                websocketonsend(Data){
+                    this.websock.send(JSON.stringify(Data))
+                },
+                websocketonerror(){
+                    this.initWebSocket();
+                },
+                websocketonclose(e){
+                    console.log("断开连接", e);
+                }
+            }
+        })
+    </script>
+</body>
+</html>
