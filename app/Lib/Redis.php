@@ -28,8 +28,39 @@ class Redis
         return self::$instance;
     }
 
+    public function set()
+    {
+
+    }
+
+    public function get()
+    {
+
+    }
+
+    public function delete()
+    {
+
+    }
+
+    public function push()
+    {
+
+    }
+
+    public function pop()
+    {
+
+    }
+
+    public function getLength()
+    {
+
+    }
+
     private function __clone()
     {
         // TODO: Implement __clone() method.
     }
+
 }

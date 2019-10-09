@@ -35,7 +35,7 @@
                     this.websocketonsend(actions);
                 },
                 initWebSocket(){
-                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://192.168.10.10:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;
