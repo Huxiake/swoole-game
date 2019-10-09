@@ -6,19 +6,22 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 use App\Manager\DataCenter;
+use App\Manager\Logic;
 class Server
 {
     const HOST = '0.0.0.0';
     const PORT = 8501;
     const FRONT_PORT = 8502;
     const CONFIG = [
-        'worker_num' => 4,
+        'worker_num' => 1,
         'enable_static_handler' => true,
-        'document_root' => '/home/vagrant/code/HideAndSeek/frontend',
+        'document_root' => __DIR__.'/../frontend/',
         'daemonize' => 0
     ];
+    const CLIENT_CODE_MATCH_PLAYER = 600;
 
     private $ws;
+    private $logic;
 
     public function __construct()
     {
@@ -31,6 +34,7 @@ class Server
         $this->ws->on('message', [$this, 'onMessage']);
         $this->ws->on('close', [$this, 'onClose']);
         $this->ws->start();
+        $this->logic = new Logic();
     }
 
     public function onStart( $server_name )
@@ -47,18 +51,28 @@ class Server
     public function onOpen( $server, $request )
     {
         DataCenter::log(sprintf("client open fd: %d", $request->fd));
+        $playerId = $request->get['player_id'];
+        DataCenter::setPlayerInfo($playerId, $request->fd);
     }
 
     public function onMessage( $server, $request )
     {
-        $client_fd = $request->fd;
         DataCenter::log(sprintf("client fd %d send message: %s", $request->fd, $request->data));
-        $server->push($client_fd, '同意连接');
+        // 根据当前fd获取到player_id
+        $clientData = json_decode($request->data, true);
+        $playerId = DataCenter::getPlayerId($request->fd);
+        switch( $clientData['code'] )
+        {
+            case self::CLIENT_CODE_MATCH_PLAYER:
+                $this->logic->matchPlayer($playerId);
+                break;
+        }
     }
 
     public function onClose( $server, $fd )
     {
         DataCenter::log(sprintf("client %d close", $fd));
+        DataCenter::delPlayerId($fd);
     }
 }
 

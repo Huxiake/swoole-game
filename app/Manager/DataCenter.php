@@ -5,8 +5,12 @@
  */
 namespace App\Manager;
 
+use App\Lib\Redis;
+
 class DataCenter
 {
+    public static $global;
+
     public static function log( $info, $context = [], $level = 'INFO' )
     {
         if ($context) {
@@ -15,5 +19,10 @@ class DataCenter
         } else {
             echo sprintf("[%s][%s] : %s\n", date('Y-m-d H:i:s'), $level, $info);
         }
+    }
+
+    public static function redis()
+    {
+        return Redis::getInstance();
     }
 }
