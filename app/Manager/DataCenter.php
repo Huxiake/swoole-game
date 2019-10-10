@@ -23,6 +23,25 @@ class DataCenter
         }
     }
 
+    public static function initDataCenter()
+    {
+        $key = self::PREFIX_KEY . ":player_wait_list";
+        self::redis()->del($key);
+
+        $key = self::PREFIX_KEY . ':player_id*';
+        $player_id_keys = self::redis()->keys($key);
+        foreach ($player_id_keys as $val) {
+            self::redis()->del($val);
+        }
+
+        $key = self::PREFIX_KEY . ':player_fd*';
+        $player_fd_keys = self::redis()->keys($key);
+        foreach ($player_fd_keys as $val) {
+            self::redis()->del($val);
+        }
+
+    }
+
     /**
      * 推送玩家到匹配队列
      * @param $playerId

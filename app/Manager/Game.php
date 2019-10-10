@@ -18,6 +18,16 @@ class Game
         $this->gameMap = new Map(12, 12);
     }
 
+    public function getPlayers()
+    {
+        return $this->players;
+    }
+
+    public function getMapData()
+    {
+        return $this->gameMap->getMapData();
+    }
+
     /**
      * 创建玩家(追赶着和躲藏者先来后到，先来的为追赶者,并且只有一个追赶者)
      * @param $playerId

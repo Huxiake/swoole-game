@@ -8,6 +8,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use App\Manager\DataCenter;
 use App\Manager\Logic;
 use App\Manager\TaskManager;
+use App\Manager\Sender;
 class Server
 {
     const HOST = '0.0.0.0';
@@ -22,6 +23,7 @@ class Server
         'dispatch_mode' => 5
     ];
     const CLIENT_CODE_MATCH_PLAYER = 600;
+    const CLIENT_CODE_BEGIN_GAME = 601;
 
     private $ws;
     private $logic;
@@ -45,6 +47,7 @@ class Server
 
     public function onStart( $server_name )
     {
+        DataCenter::initDataCenter();
         swoole_set_process_name( 'swoole-hide-seek' );
         echo sprintf("master start (listening on %s:%d)\n", self::HOST, self::PORT);
     }
@@ -72,6 +75,9 @@ class Server
         {
             case self::CLIENT_CODE_MATCH_PLAYER: // 匹配玩家时的code
                 $this->logic->matchPlayer($playerId);
+                break;
+            case self::CLIENT_CODE_BEGIN_GAME:
+                $this->logic->startRoom($clientData['room_id'], $playerId);
                 break;
         }
     }
@@ -111,7 +117,6 @@ class Server
                 $this->logic->createRoom($data['data']['red_player'], $data['data']['blue_player']);
                 break;
         }
-        print_r($data);
     }
 }
 

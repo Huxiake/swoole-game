@@ -23,6 +23,7 @@ class Redis
         if ( empty(self::$instance) ) {
             $instance = new \Redis();
             $instance->connect( self::$config['host'], self::$config['port'] );
+            $instance->select(1);
             self::$instance = $instance;
         }
         return self::$instance;

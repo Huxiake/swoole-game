@@ -7,6 +7,8 @@ namespace App\Manager;
 
 class Logic
 {
+    const PLAYER_DISPLAY_LEN = 2;
+
     public function matchPlayer($playerId)
     {
         DataCenter::pushPlayerToWaitList($playerId);
@@ -26,6 +28,66 @@ class Logic
     {
         $playerFd = DataCenter::getPlayerFd($playerId);
         DataCenter::$server->bind($playerFd, crc32($roomId));
-        DataCenter::$server->push($playerFd, $roomId);
+        Sender::sendMessage($playerId, Sender::MSG_ROOM_ID, ['room_id' => $roomId]);
+    }
+
+    public function startRoom($roomId, $playerId)
+    {
+        if (!isset(DataCenter::$global['rooms'][$roomId])) {
+            DataCenter::$global['rooms'][$roomId] = [
+                'id' => $roomId,
+                'manager' => new Game()
+            ];
+        }
+
+        $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
+        if ( count($gameManager->getPlayers()) < 1 ) {
+            // 第一个玩家
+            $gameManager->createPlayer($playerId, 6, 1);
+            Sender::sendMessage($playerId, Sender::MSG_WAIT_PLAYER);
+        } else {
+            // 第二个玩家为蓝方
+//            $redPlayerId = $gameManager->getPlayers()[0];
+//            Sender::sendMessage($redPlayerId, Sender::MSG_ROOM_START);
+            $gameManager->createPlayer($playerId, 6, 10);
+            Sender::sendMessage($playerId, Sender::MSG_ROOM_START);
+            $this->sendGameInfo($roomId);
+        }
+    }
+
+    private function sendGameInfo($roomId)
+    {
+        $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
+        $players = $gameManager->getPlayers();
+        $mapData = $gameManager->getMapData();
+        foreach ($players as $player) {
+            $mapData[$player->getX()][$player->getY()] = $player->getId();
+        }
+        foreach ($players as $player) {
+            $data = [
+                'players' => $players,
+                'map_data' => $mapData
+            ];
+            Sender::sendMessage($player->getId(), Sender::MSG_GAME_INFO,
+                $this->getNearMap($mapData, $player->getX(), $player->getY()));
+        }
+    }
+
+    public function getNearMap($mapData, $x, $y)
+    {
+        $l_view = ($x - self::PLAYER_DISPLAY_LEN) < 0 ? 0 : $x - self::PLAYER_DISPLAY_LEN;
+        $r_view = ($x + self::PLAYER_DISPLAY_LEN) > 11 ? 11 : $x + self::PLAYER_DISPLAY_LEN;
+
+        $u_view = ($y - self::PLAYER_DISPLAY_LEN) < 0 ? 0 : $y - self::PLAYER_DISPLAY_LEN;
+        $d_view = ($y + self::PLAYER_DISPLAY_LEN) > 11 ? 11 : $y + self::PLAYER_DISPLAY_LEN;
+        $nearMapData = [];
+        for ($id_x = $l_view; $id_x <= $r_view; $id_x++ ) {
+            $temp = [];
+            for ($id_y = $u_view; $id_y <= $d_view; $id_y++) {
+                $temp[] = $mapData[$id_x][$id_y];
+            }
+            $nearMapData[] = $temp;
+        }
+        return $nearMapData;
     }
 }

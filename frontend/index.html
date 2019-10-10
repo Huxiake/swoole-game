@@ -13,6 +13,26 @@
             <input type="text" :value="playerId">
             <button @click="matchPlayer">匹配</button>
         </label>
+        <div v-if="matching" style="display: inline">
+            匹配中.....
+        </div>
+
+
+        <br /><br />
+        <div v-if="mapData" style="display: flex">
+            <div>
+                <template v-for="column in mapData">
+                    <div>
+                        <template v-for="item in column">
+                            <div v-if="item==playerId" class="gameItem player">{{playerId}}</div>
+                            <div v-else-if="item==0" class="gameItem wall">墙</div>
+                            <div v-else-if="item==1" class="gameItem road">路</div>
+                            <div v-else class="gameItem player">{{item}}</div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -22,6 +42,9 @@
                 message: 'Hello Vue',
                 websock: null,
                 playerId: 'player_' + Math.round(Math.random() * 1000),
+                roomId: null,
+                matching: false,
+                mapData: ''
             },
             created(){
                 this.initWebSocket();
@@ -32,10 +55,16 @@
             methods: {
                 matchPlayer(){
                     let actions = {"code":600};
+                    this.matching = true;
                     this.websocketonsend(actions);
                 },
+                startRoom(){
+                    let actions = {"code": 601, 'room_id': this.roomId};
+                    this.websocketonsend(actions);
+                    this.matching = false;
+                },
                 initWebSocket(){
-                    const wsurl = 'ws://192.168.10.10:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;
@@ -45,7 +74,18 @@
                 websocketonopen(){
                 },
                 websocketonmessage(e){
-                    console.log(e.data);
+                    let message = JSON.parse(e.data);
+                    let serverData = message.data;
+                    switch (message.code) {
+                        case 1001:
+                            this.roomId = serverData.room_id;
+                            this.startRoom();
+                            break;
+                        case 1004:
+                            this.mapData = serverData.map_data;
+                            break;
+                    }
+
                 },
                 websocketonsend(Data){
                     this.websock.send(JSON.stringify(Data))
