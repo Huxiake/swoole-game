@@ -5,6 +5,8 @@
  */
 namespace App\Manager;
 
+use App\Model\Player;
+
 class Logic
 {
     const PLAYER_DISPLAY_LEN = 2;
@@ -63,7 +65,31 @@ class Logic
         if (isset(DataCenter::$global['rooms'][$roomId])) {
             $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
             $gameManager->playerMove($playerId, $direction);
+            // 判断游戏结束
+            $this->checkGameOver($roomId);
             $this->sendGameInfo($roomId);
+        }
+    }
+
+    private function checkGameOver($roomId)
+    {
+        $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
+        if ($gameManager->isGameOver()) {
+            foreach ($gameManager->getPlayers() as $player) {
+                DataCenter::delPlayerRoomId($player->getId());
+                if ($player->getType() == Player::PLAYER_TYPE_SEEK) {
+                    $seekId = $player->getId();
+                }
+                if ($player->getType() == Player::PLAYER_TYPE_HIDE) {
+                    $hideId = $player->getId();
+                }
+            }
+            Sender::sendMessage($seekId, Sender::MSG_GAME_OVER, json_encode([
+                'winner' => $seekId
+            ]));
+            Sender::sendMessage($hideId, Sender::MSG_GAME_OVER, json_encode([
+                'loseer' => $hideId
+            ]));
         }
     }
 
@@ -72,9 +98,11 @@ class Logic
         $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
         $players = $gameManager->getPlayers();
         $mapData = $gameManager->getMapData();
-        foreach ($players as $player) {
+        // 无论如何先打印影藏者，再打印追赶者
+        foreach (array_reverse($players) as $player) {
             $mapData[$player->getX()][$player->getY()] = $player->getId();
         }
+
         foreach ($players as $player) {
             $data = [
                 'players' => $players,

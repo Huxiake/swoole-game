@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>HideAndSeek</title>
     <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://www.layuicdn.com/layui/css/layui.css" />
     <link rel="icon" href="data:;base64,=">
     <style>
         .gameItem {
@@ -70,18 +71,21 @@
                     </div>
                 </template>
             </div>
-        </div>
-            <div v-for="i in 5">
-                <div @mouseup="removeClickClass">
-                    <template v-for="j in 5">
-                        <div v-if="i==2&&j==3" @mousedown="clickDirect('up')" data-direction="up" class="gameItem gameButton">上</div>
-                        <div v-else-if="i==3&&j==2" @mousedown="clickDirect('left')" data-direction="left" class="gameItem gameButton">左</div>
-                        <div v-else-if="i==3&&j==4" @mousedown="clickDirect('right')" data-direction="right" class="gameItem gameButton">右</div>
-                        <div v-else-if="i==4&&j==3" @mousedown="clickDirect('down')" data-direction="down" class="gameItem gameButton">下</div>
-                        <div v-else class="gameItem space">无</div>
-                    </template>
+            <div>
+                <div v-for="i in 5">
+                    <div @mouseup="removeClickClass">
+                        <template v-for="j in 5">
+                            <div v-if="i==2&&j==3" @mousedown="clickDirect('up')" data-direction="up" class="gameItem gameButton">上</div>
+                            <div v-else-if="i==3&&j==2" @mousedown="clickDirect('left')" data-direction="left" class="gameItem gameButton">左</div>
+                            <div v-else-if="i==3&&j==4" @mousedown="clickDirect('right')" data-direction="right" class="gameItem gameButton">右</div>
+                            <div v-else-if="i==4&&j==3" @mousedown="clickDirect('down')" data-direction="down" class="gameItem gameButton">下</div>
+                            <div v-else class="gameItem space">无</div>
+                        </template>
+                    </div>
                 </div>
             </div>
+        </div>
+
     </div>
 
     <script>
@@ -123,7 +127,7 @@
                 addClickClass(direction){
                     let divs = document.getElementsByClassName('gameButton');
                     for (let div of divs) {
-                        this.addClass(div, 'cliclButton');
+                        this.addClass(div, 'clickButton');
                     }
                 },
                 removeClickClass(){
@@ -143,7 +147,7 @@
                     this.matching = false;
                 },
                 initWebSocket(){
-                    const wsurl = 'ws://192.168.10.10:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;

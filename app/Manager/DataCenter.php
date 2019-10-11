@@ -55,7 +55,7 @@ class DataCenter
     public static function pushPlayerToWaitList($playerId)
     {
         $key = self::PREFIX_KEY . ":player_wait_list";
-        self::redis()->lPush($key, $playerId);
+        self::redis()->rPush($key, $playerId);
     }
 
     public static function popPlayerFromWaitList()
