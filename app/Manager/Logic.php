@@ -26,6 +26,7 @@ class Logic
 
     private function bindRoomWorker($playerId, $roomId)
     {
+        DataCenter::setPlayerRoomId($playerId, $roomId);
         $playerFd = DataCenter::getPlayerFd($playerId);
         DataCenter::$server->bind($playerFd, crc32($roomId));
         Sender::sendMessage($playerId, Sender::MSG_ROOM_ID, ['room_id' => $roomId]);
@@ -55,6 +56,17 @@ class Logic
         }
     }
 
+    public function movePlayer($playerId, $direction)
+    {
+        // 根据玩家ID找打房间
+        $roomId = DataCenter::getPlayerRoomId($playerId);
+        if (isset(DataCenter::$global['rooms'][$roomId])) {
+            $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
+            $gameManager->playerMove($playerId, $direction);
+            $this->sendGameInfo($roomId);
+        }
+    }
+
     private function sendGameInfo($roomId)
     {
         $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
@@ -66,10 +78,9 @@ class Logic
         foreach ($players as $player) {
             $data = [
                 'players' => $players,
-                'map_data' => $mapData
+                'map_data' => $this->getNearMap($mapData, $player->getX(), $player->getY())
             ];
-            Sender::sendMessage($player->getId(), Sender::MSG_GAME_INFO,
-                $this->getNearMap($mapData, $player->getX(), $player->getY()));
+            Sender::sendMessage($player->getId(), Sender::MSG_GAME_INFO, $data);
         }
     }
 

@@ -5,6 +5,44 @@
     <title>HideAndSeek</title>
     <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
     <link rel="icon" href="data:;base64,=">
+    <style>
+        .gameItem {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            border: 1px solid black;
+            text-align: center;
+        }
+
+        .wall {
+            background-color: black;
+        }
+
+        .road {
+            color: white;
+        }
+
+        .player {
+        }
+        .control {
+            margin-left: 650px;
+        }
+        .gameButton {
+            background-color: #efefef;
+        }
+
+        .space {
+            background-color: white;
+            color: white;
+            border: 0;
+            margin: 1px;
+        }
+
+        .clickButton {
+            background: #dddddd;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -33,6 +71,17 @@
                 </template>
             </div>
         </div>
+            <div v-for="i in 5">
+                <div @mouseup="removeClickClass">
+                    <template v-for="j in 5">
+                        <div v-if="i==2&&j==3" @mousedown="clickDirect('up')" data-direction="up" class="gameItem gameButton">上</div>
+                        <div v-else-if="i==3&&j==2" @mousedown="clickDirect('left')" data-direction="left" class="gameItem gameButton">左</div>
+                        <div v-else-if="i==3&&j==4" @mousedown="clickDirect('right')" data-direction="right" class="gameItem gameButton">右</div>
+                        <div v-else-if="i==4&&j==3" @mousedown="clickDirect('down')" data-direction="down" class="gameItem gameButton">下</div>
+                        <div v-else class="gameItem space">无</div>
+                    </template>
+                </div>
+            </div>
     </div>
 
     <script>
@@ -44,7 +93,7 @@
                 playerId: 'player_' + Math.round(Math.random() * 1000),
                 roomId: null,
                 matching: false,
-                mapData: ''
+                mapData: null
             },
             created(){
                 this.initWebSocket();
@@ -53,6 +102,36 @@
                 this.websock.close();
             },
             methods: {
+                clickDirect(direction){
+                    let actions = {"code": 602, 'direction': direction};
+                    this.websocketonsend(actions);
+                    this.addClickClass(direction);
+                },
+                hasClass(ele, cls){
+                    return ele.className.match(new RegExp("(\\s|^)" + cls + "(\\s|$)"));
+                },
+                addClass(ele, cls){
+                    if (!this.hasClass(ele, cls)) ele.className += " " + cls;
+                },
+                removeClass(ele, cls)
+                {
+                    if (this.hasClass(ele, cls)) {
+                        let reg = new RegExp("(\\s|^)" + cls + "(\\s|$)");
+                        ele.className = ele.className.replace(reg, "");
+                    }
+                },
+                addClickClass(direction){
+                    let divs = document.getElementsByClassName('gameButton');
+                    for (let div of divs) {
+                        this.addClass(div, 'cliclButton');
+                    }
+                },
+                removeClickClass(){
+                    let divs = document.getElementsByClassName('gameButton')
+                    for (let div of divs) {
+                        this.removeClass(div, 'clickButton');
+                    }
+                },
                 matchPlayer(){
                     let actions = {"code":600};
                     this.matching = true;
@@ -64,7 +143,7 @@
                     this.matching = false;
                 },
                 initWebSocket(){
-                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://192.168.10.10:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;

@@ -24,6 +24,7 @@ class Server
     ];
     const CLIENT_CODE_MATCH_PLAYER = 600;
     const CLIENT_CODE_BEGIN_GAME = 601;
+    const CLIENT_CODE_DIRECTION = 602;
 
     private $ws;
     private $logic;
@@ -78,6 +79,9 @@ class Server
                 break;
             case self::CLIENT_CODE_BEGIN_GAME:
                 $this->logic->startRoom($clientData['room_id'], $playerId);
+                break;
+            case self::CLIENT_CODE_DIRECTION:
+                $this->logic->movePlayer($playerId, $clientData['direction']);
                 break;
         }
     }

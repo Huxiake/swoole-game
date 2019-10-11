@@ -40,6 +40,12 @@ class DataCenter
             self::redis()->del($val);
         }
 
+        $key = self::PREFIX_KEY . ':room_id*';
+        $room_id_keys = self::redis()->keys($key);
+        foreach ($room_id_keys as $val) {
+            self::redis()->del($val);
+        }
+
     }
 
     /**
@@ -162,4 +168,24 @@ class DataCenter
     {
         return Redis::getInstance();
     }
+
+    /* -----------------------------  将玩家与房间绑定  ------------------------------------ */
+    public static function setPlayerRoomId($playerId, $roomId)
+    {
+        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
+        self::redis()->set($key, $roomId);
+    }
+
+    public static function getPlayerRoomId($playerId)
+    {
+        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
+        return self::redis()->get($key);
+    }
+
+    public static function delPlayerRoomId($playerId)
+    {
+        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
+        self::redis()->del($key);
+    }
+
 }
