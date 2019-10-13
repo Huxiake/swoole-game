@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <title>HideAndSeek</title>
     <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://www.layuicdn.com/layui/css/layui.css" />
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <script src="/layui/layui.js"></script>
     <link rel="icon" href="data:;base64,=">
     <style>
+        .containerApp{
+            display: flex;
+            margin-left: 100px;
+        }
         .gameItem {
             display: inline-block;
             width: 100px;
@@ -15,11 +20,13 @@
             border: 1px solid black;
             text-align: center;
         }
-
-        .wall {
-            background-color: black;
+        .map{
+            width: 510px;
+            height: 510px;
         }
-
+        .wall {
+            background-color: #009688;
+        }
         .road {
             color: white;
         }
@@ -47,19 +54,39 @@
 </head>
 <body>
     <div id="app">
-        <label>
-            玩家ID:
-            <input type="text" :value="playerId">
-            <button @click="matchPlayer">匹配</button>
-        </label>
+        <div class="layui-card" style="width: 500px; margin-left: 50px; margin-top: 10px;">
+            <div class="layui-card-header">玩家ID: <span>{{ playerId }}</span></div>
+            <div class="layui-card-body">
+                <button type="button" class="layui-btn" @click="matchPlayer">匹配</button>
+            </div>
+        </div>
         <div v-if="matching" style="display: inline">
             匹配中.....
         </div>
-
-
         <br /><br />
-        <div v-if="mapData" style="display: flex">
-            <div>
+
+        <div v-if="mapData" class="containerApp">
+            <div class="container" style="width: 300px; margin-right: 50px;margin-top: 190px">
+                <div class="layui-row">
+                    <div class="layui-col-md4 layui-col-md-offset4">
+                        <button data-direction="up" @mousedown="clickDirect('up')" class="layui-btn"><i class="layui-icon">&#xe619;</i></button>
+                    </div>
+                </div>
+                <div class="layui-row">
+                    <div class="layui-col-md4">
+                        <button @mousedown="clickDirect('left')" data-direction="left" class="layui-btn"><i class="layui-icon">&#xe603;</i></button>
+                    </div>
+                    <div class="layui-col-md4 layui-col-md-offset4">
+                        <button @mousedown="clickDirect('right')" data-direction="right" class="layui-btn"><i class="layui-icon">&#xe602;</i></button>
+                    </div>
+                </div>
+                <div class="layui-row">
+                    <div class="layui-col-md4 layui-col-md-offset4">
+                        <button @mousedown="clickDirect('down')" data-direction="down" class="layui-btn"><i class="layui-icon">&#xe61a;</i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="map">
                 <template v-for="column in mapData">
                     <div>
                         <template v-for="item in column">
@@ -71,41 +98,44 @@
                     </div>
                 </template>
             </div>
-            <div>
-                <div v-for="i in 5">
-                    <div @mouseup="removeClickClass">
-                        <template v-for="j in 5">
-                            <div v-if="i==2&&j==3" @mousedown="clickDirect('up')" data-direction="up" class="gameItem gameButton">上</div>
-                            <div v-else-if="i==3&&j==2" @mousedown="clickDirect('left')" data-direction="left" class="gameItem gameButton">左</div>
-                            <div v-else-if="i==3&&j==4" @mousedown="clickDirect('right')" data-direction="right" class="gameItem gameButton">右</div>
-                            <div v-else-if="i==4&&j==3" @mousedown="clickDirect('down')" data-direction="down" class="gameItem gameButton">下</div>
-                            <div v-else class="gameItem space">无</div>
-                        </template>
-                    </div>
-                </div>
-            </div>
         </div>
 
     </div>
-
+    <script src="/layer/layer.js"></script>
     <script>
         var app = new Vue({
             el: '#app',
             data: {
                 message: 'Hello Vue',
                 websock: null,
-                playerId: 'player_' + Math.round(Math.random() * 1000),
+                // playerId: 'player_' + Math.round(Math.random() * 1000),
+                playerId: 'player_' + "001",
                 roomId: null,
                 matching: false,
                 mapData: null
             },
             created(){
                 this.initWebSocket();
+                this.initDirectionKey();
             },
             destroyed() {
                 this.websock.close();
             },
             methods: {
+                initDirectionKey(){
+                    var that = this;
+                    document.onkeydown = function () {
+                        if(event.keyCode === 38 ) {
+                            that.clickDirect('up');
+                        }else if(event.keyCode === 37 ) {
+                            that.clickDirect('left');
+                        }else if(event.keyCode === 39 ) {
+                            that.clickDirect('right');
+                        }else if(event.keyCode === 40 ) {
+                            that.clickDirect('down');
+                        }
+                    }
+                },
                 clickDirect(direction){
                     let actions = {"code": 602, 'direction': direction};
                     this.websocketonsend(actions);
@@ -127,7 +157,9 @@
                 addClickClass(direction){
                     let divs = document.getElementsByClassName('gameButton');
                     for (let div of divs) {
-                        this.addClass(div, 'clickButton');
+                        if (div.dataset.direction === direction) {
+                            this.addClass(div, 'clickButton');
+                        }
                     }
                 },
                 removeClickClass(){
@@ -147,7 +179,7 @@
                     this.matching = false;
                 },
                 initWebSocket(){
-                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://192.168.12.111:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;
@@ -167,8 +199,14 @@
                         case 1004:
                             this.mapData = serverData.map_data;
                             break;
+                        case 1005:
+                            if (this.playerId == serverData.winner) {
+                                alert(this.playerId + "你赢了");
+                            } else {
+                                alert(this.playerId + "你输了")
+                            }
+                            break;
                     }
-
                 },
                 websocketonsend(Data){
                     this.websock.send(JSON.stringify(Data))
@@ -177,7 +215,10 @@
                     this.initWebSocket();
                 },
                 websocketonclose(e){
-                    console.log("断开连接", e);
+                    layer.open({
+                        title: 'tips',
+                        content: e.data
+                    });
                 }
             }
         })

@@ -46,6 +46,8 @@ class DataCenter
             self::redis()->del($val);
         }
 
+        $onlineKey = self::PREFIX_KEY . ':online:';
+        self::redis()->del($onlineKey);
     }
 
     /**
@@ -147,6 +149,7 @@ class DataCenter
     {
         self::setPlayerFd($playerId, $fd);
         self::setPlayerId($playerId, $fd);
+        self::setOnlinePlayer($playerId);
     }
 
     /**
@@ -186,6 +189,24 @@ class DataCenter
     {
         $key = self::PREFIX_KEY . ':room_id:' . $playerId;
         self::redis()->del($key);
+    }
+
+    public static function setOnlinePlayer($playerId)
+    {
+        $key = self::PREFIX_KEY . ':online:';
+        self::redis()->hSet($key, $playerId, 1);
+    }
+
+    public static function getOnlinePlayer($playerId)
+    {
+        $key = self::PREFIX_KEY . ':online:';
+        return self::redis()->hGet($key, $playerId);
+    }
+
+    public static function delOnlinePlayerId($playerId)
+    {
+        $key = self::PREFIX_KEY . ':online:';
+        self::redis()->hDel($key, $playerId);
     }
 
 }

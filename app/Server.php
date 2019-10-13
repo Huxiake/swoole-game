@@ -40,6 +40,9 @@ class Server
         $this->ws->on('open', [$this, 'onOpen']);
         $this->ws->on('message', [$this, 'onMessage']);
         $this->ws->on('close', [$this, 'onClose']);
+        // http
+
+        $this->ws->on('request', [$this, 'onRequest']);
         // task
         $this->ws->on('task', [$this, 'onTask']);
         $this->ws->on('finish', [$this, 'onFinish']);
@@ -63,7 +66,12 @@ class Server
     {
         DataCenter::log(sprintf("client open fd: %d", $request->fd));
         $playerId = $request->get['player_id'];
-        DataCenter::setPlayerInfo($playerId, $request->fd);
+        if ( DataCenter::getOnlinePlayer($playerId) ) {
+            // 主动断开连接
+            $server->disconnect($request->fd, 1000, "该玩家已经在线");
+        } else {
+            DataCenter::setPlayerInfo($playerId, $request->fd);
+        }
     }
 
     public function onMessage( $server, $request )
@@ -90,6 +98,13 @@ class Server
     {
         DataCenter::log(sprintf("client %d close", $fd));
         DataCenter::delPlayerId($fd);
+    }
+
+    /*  ------------------------------        ------------------------------------   */
+
+    public function onRequest($request, $response)
+    {
+        $response->write('hello World');
     }
 
     /*  -----------------------------Task异步任务---------------------------------    */

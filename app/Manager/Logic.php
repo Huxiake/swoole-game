@@ -66,8 +66,8 @@ class Logic
             $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
             $gameManager->playerMove($playerId, $direction);
             // 判断游戏结束
-            $this->checkGameOver($roomId);
             $this->sendGameInfo($roomId);
+            $this->checkGameOver($roomId);
         }
     }
 
@@ -79,17 +79,17 @@ class Logic
                 DataCenter::delPlayerRoomId($player->getId());
                 if ($player->getType() == Player::PLAYER_TYPE_SEEK) {
                     $seekId = $player->getId();
+                    Sender::sendMessage($seekId, Sender::MSG_GAME_OVER, [
+                        'winner' => $seekId
+                    ]);
                 }
                 if ($player->getType() == Player::PLAYER_TYPE_HIDE) {
                     $hideId = $player->getId();
+                    Sender::sendMessage($hideId, Sender::MSG_GAME_OVER, [
+                        'loseer' => $hideId
+                    ]);
                 }
             }
-            Sender::sendMessage($seekId, Sender::MSG_GAME_OVER, json_encode([
-                'winner' => $seekId
-            ]));
-            Sender::sendMessage($hideId, Sender::MSG_GAME_OVER, json_encode([
-                'loseer' => $hideId
-            ]));
         }
     }
 
