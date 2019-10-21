@@ -5,3 +5,6 @@
  */
 
 define('MATCH_PLAYER_CODE', 600);
+
+// 游戏时间限制
+const GAME_TIME_LIMIT = 600;

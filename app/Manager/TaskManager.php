@@ -13,16 +13,41 @@ class TaskManager
      * 匹配玩家(简单匹配)
      * @return array|bool
      */
-    public static function findPlayer()
+    public static function findPlayer($playerId, $playerType)
     {
-        if (DataCenter::getPlayerWaitListLen() >= 2) {
-            $redPlayer = DataCenter::popPlayerFromWaitList();
-            $bluePlayer = DataCenter::popPlayerFromWaitList();
-            return [
-                'red_player' => $redPlayer,
-                'blue_player' => $bluePlayer,
-            ];
+        if ($playerType == 1) {
+            if (DataCenter::getPlayerWaitListLen(2) < 1) {
+                return false;
+            }
+            $seekPlayer = DataCenter::popPlayerFromWaitSeekList();
+            if ( $seekPlayer != $playerId ) {
+                DataCenter::lpushPlayerToWaitList($seekPlayer, 'seek');
+                return false;
+            }
+            $hidePlayer = DataCenter::popPlayerFromWaitHideList();
+        } elseif ($playerType == 2) {
+            if (DataCenter::getPlayerWaitListLen(1) < 1) {
+                return false;
+            }
+            $hidePlayer = DataCenter::popPlayerFromWaitHideList();
+            if ( $hidePlayer != $playerId ) {
+                DataCenter::lpushPlayerToWaitList($hidePlayer, 'hide');
+                return false;
+            }
+            $seekPlayer = DataCenter::popPlayerFromWaitSeekList();
         }
-        return false;
+        return [
+            'seek' => ['seek_player' => $seekPlayer, 'type' => 'seek'],
+            'hide' => ['hide_player' => $hidePlayer, 'type' => 'hide']
+        ];
+//        if (DataCenter::getPlayerWaitListLen() >= 2) {
+//            $redPlayer = DataCenter::popPlayerFromWaitList();
+//            $bluePlayer = DataCenter::popPlayerFromWaitList();
+//            return [
+//                'red_player' => $redPlayer,
+//                'blue_player' => $bluePlayer,
+//            ];
+//        }
+//        return false;
     }
 }

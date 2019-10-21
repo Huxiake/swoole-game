@@ -6,7 +6,7 @@
 namespace App\Manager;
 
 use App\Lib\Redis;
-
+use App\Model\Player;
 class DataCenter
 {
     public static $global;
@@ -48,32 +48,68 @@ class DataCenter
 
         $onlineKey = self::PREFIX_KEY . ':online:';
         self::redis()->del($onlineKey);
+
+        $seekWaitkey = self::PREFIX_KEY . ':player_wait_seek_list';
+        self::redis()->del($seekWaitkey);
+        $hideWaitkey = self::PREFIX_KEY . ':player_wait_hide_list';
+        self::redis()->del($hideWaitkey);
     }
 
     /**
      * 推送玩家到匹配队列
      * @param $playerId
      */
-    public static function pushPlayerToWaitList($playerId)
+    public static function pushPlayerToWaitList($playerId, $playerType = 0)
     {
-        $key = self::PREFIX_KEY . ":player_wait_list";
-        self::redis()->rPush($key, $playerId);
+        if ($playerType == Player::PLAYER_TYPE_SEEK) {
+            $key = self::PREFIX_KEY . ":player_wait_seek_list";
+        } elseif ($playerType == Player::PLAYER_TYPE_HIDE) {
+            $key = self::PREFIX_KEY . ":player_wait_hide_list";
+        }
+        self::redis()->sAdd($key, $playerId);
     }
 
-    public static function popPlayerFromWaitList()
+    /**
+     * 随机从追赶者等待队列中弹出一个玩家
+     * @return int
+     */
+    public static function popPlayerFromWaitSeekList()
     {
-        $key = self::PREFIX_KEY . ":player_wait_list";
-        return self::redis()->rPop($key);
+        $key = self::PREFIX_KEY . ":player_wait_seek_list";
+        return self::redis()->sPop($key);
     }
 
+    /**
+     * 随机从隐藏者等待队列中弹出一个玩家
+     * @return int
+     */
+    public static function popPlayerFromWaitHideList()
+    {
+        $key = self::PREFIX_KEY . ":player_wait_hide_list";
+        return self::redis()->sPop($key);
+    }
+
+    public static function delPlayerFromWaitList($playerId, $playerType = 0)
+    {
+        if ($playerType == Player::PLAYER_TYPE_SEEK) {
+            $key = self::PREFIX_KEY . ":player_wait_seek_list";
+        } elseif ($playerType == Player::PLAYER_TYPE_HIDE) {
+            $key = self::PREFIX_KEY . ":player_wait_hide_list";
+        }
+        self::redis()->sRem($key, $playerId);
+    }
     /**
      * 获取匹配队列人数
      * @return int
      */
-    public static function getPlayerWaitListLen()
+    public static function getPlayerWaitListLen($playerType)
     {
-        $key = self::PREFIX_KEY . ":player_wait_list";
-        return self::redis()->lLen($key);
+        if ($playerType == Player::PLAYER_TYPE_SEEK) {
+            $key = self::PREFIX_KEY . ":player_wait_seek_list";
+        } elseif ($playerType == Player::PLAYER_TYPE_HIDE) {
+            $key = self::PREFIX_KEY . ":player_wait_hide_list";
+        }
+        return self::redis()->sCard($key);
     }
 
     /**
@@ -161,6 +197,7 @@ class DataCenter
         $playerId = self::getPlayerId($fd);
         self::delPlayerFd($playerId);
         self::delPlayerId($fd);
+        self::delOnlinePlayerId($playerId);
     }
 
     /**
@@ -191,6 +228,8 @@ class DataCenter
         self::redis()->del($key);
     }
 
+    /*-----------------------Hash 操作---------------------------------*/
+
     public static function setOnlinePlayer($playerId)
     {
         $key = self::PREFIX_KEY . ':online:';
@@ -203,10 +242,23 @@ class DataCenter
         return self::redis()->hGet($key, $playerId);
     }
 
+    public static function getAllOnlinePlayers()
+    {
+        $key = self::PREFIX_KEY . ':online:';
+        return self::redis()->hGetAll($key);
+    }
+
     public static function delOnlinePlayerId($playerId)
     {
         $key = self::PREFIX_KEY . ':online:';
         self::redis()->hDel($key, $playerId);
     }
+
+    public static function hLenOnlinePlayer()
+    {
+        $key = self::PREFIX_KEY . ':online:';
+        return self::redis()->hLen($key);
+    }
+
 
 }

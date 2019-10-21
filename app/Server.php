@@ -9,6 +9,7 @@ use App\Manager\DataCenter;
 use App\Manager\Logic;
 use App\Manager\TaskManager;
 use App\Manager\Sender;
+use App\Model\Player;
 class Server
 {
     const HOST = '0.0.0.0';
@@ -25,6 +26,7 @@ class Server
     const CLIENT_CODE_MATCH_PLAYER = 600;
     const CLIENT_CODE_BEGIN_GAME = 601;
     const CLIENT_CODE_DIRECTION = 602;
+    const CLIENT_CODE_ONLINE_PLAYERS = 900;
 
     private $ws;
     private $logic;
@@ -66,12 +68,14 @@ class Server
     {
         DataCenter::log(sprintf("client open fd: %d", $request->fd));
         $playerId = $request->get['player_id'];
-        if ( DataCenter::getOnlinePlayer($playerId) ) {
+        if ( !empty(DataCenter::getOnlinePlayer($playerId)) ) {
             // 主动断开连接
             $server->disconnect($request->fd, 1000, "该玩家已经在线");
         } else {
             DataCenter::setPlayerInfo($playerId, $request->fd);
         }
+        // 开启一个异步任务推送在线人数的更新
+        $server->task(['code' => self::CLIENT_CODE_ONLINE_PLAYERS]);
     }
 
     public function onMessage( $server, $request )
@@ -86,7 +90,7 @@ class Server
                 $this->logic->matchPlayer($playerId);
                 break;
             case self::CLIENT_CODE_BEGIN_GAME:
-                $this->logic->startRoom($clientData['room_id'], $playerId);
+                $this->logic->startRoom($clientData['room_id'], $playerId, $clientData['player_type']);
                 break;
             case self::CLIENT_CODE_DIRECTION:
                 $this->logic->movePlayer($playerId, $clientData['direction']);
@@ -104,7 +108,10 @@ class Server
 
     public function onRequest($request, $response)
     {
-        $response->write('hello World');
+        if (isset($request->get['action']) && $request->get['action'] == 'get_online_player') {
+            $online_player = DataCenter::hLenOnlinePlayer();
+            $response->end(json_encode(['online_player' => $online_player]));
+        }
     }
 
     /*  -----------------------------Task异步任务---------------------------------    */
@@ -115,25 +122,34 @@ class Server
         // 执行各种逻辑,根据投递过来的code
         switch ($data['code']) {
             case TaskManager::TASK_CODE_FIND_PLAYER: // 匹配玩家
-                $players = TaskManager::findPlayer();
+                // 追赶者，需要匹配隐藏者
+                $players = TaskManager::findPlayer($data['player_id'], $data['player_type']);
+//                $players = TaskManager::findPlayer();
                 if (!empty($players)) {
                     $result['data'] = $players;
                 }
+                // 没有return 就不会触发finish方法
+                if (!empty($result)) {
+                    $result['code'] = $data['code'];
+                    return $result;
+                }
                 break;
-        }
-        // 没有return 就不会触发finish方法
-        if (!empty($result)) {
-            $result['code'] = $data['code'];
-            return $result;
+            case self::CLIENT_CODE_ONLINE_PLAYERS: // 推送在线人数更新
+                $playerIds = array_keys(DataCenter::getAllOnlinePlayers());
+                foreach ( $playerIds as $player ) {
+                    Sender::sendMessage($player, 9000, ['onlinePlayers' => DataCenter::hLenOnlinePlayer()]);
+                }
+                return true;
         }
     }
 
+    // onTask 执行完回调  如果onTask返回false 则不会回调次函数
     public function onFinish($server, $taskId, $data)
     {
         DataCenter::log("Finish", $data);
         switch ($data['code']) {
             case TaskManager::TASK_CODE_FIND_PLAYER:
-                $this->logic->createRoom($data['data']['red_player'], $data['data']['blue_player']);
+                $this->logic->createRoom($data['data']['seek'], $data['data']['hide']);
                 break;
         }
     }

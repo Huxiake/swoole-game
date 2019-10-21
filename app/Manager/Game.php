@@ -34,12 +34,16 @@ class Game
      * @param $x
      * @param $y
      */
-    public function createPlayer( $playerId, $x, $y )
+    public function createPlayer( $playerId, $x, $y, $playerType = 1 )
     {
         $player = new Player($playerId, $x, $y);
-        if (!empty($this->players)) {
-            $player->setType(Player::PLAYER_TYPE_HIDE);
+        if ( !in_array($playerType, ['hide', 'seek']) ) {
+            return;
         }
+        $player->setType($playerType);
+//        if (!empty($this->players)) {
+//            $player->setType(Player::PLAYER_TYPE_HIDE);
+//        }
         $this->players[$playerId] = $player;
     }
 
