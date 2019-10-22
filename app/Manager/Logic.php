@@ -21,6 +21,11 @@ class Logic
         // $swoole_server->task(['code' => xxx]);
     }
 
+    public function disMatchPlayer($playerId)
+    {
+        DataCenter::delPlayerFromWaitList($playerId);
+    }
+
     // 创建房间
     public function createRoom($seekPlayer, $hidePlayer)
     {
@@ -50,11 +55,9 @@ class Logic
         if ( count($gameManager->getPlayers()) < 1 ) {
             // 第一个玩家
             $gameManager->createPlayer($playerId, 6, 1, $playerType);
-            print_r($gameManager->getPlayers());
             Sender::sendMessage($playerId, Sender::MSG_WAIT_PLAYER);
         } else {
             $gameManager->createPlayer($playerId, 6, 10, $playerType);
-            print_r($gameManager->getPlayers());
             Sender::sendMessage($playerId, Sender::MSG_ROOM_START);
             $this->createGameTimer($roomId); // 第二个玩家进入房间就开启一个定时器
             $this->sendGameInfo($roomId);
@@ -94,6 +97,8 @@ class Logic
                     Sender::sendMessage($seekId, Sender::MSG_GAME_OVER, [
                         'winner' => $seekId
                     ]);
+                    DataCenter::setRangePlayer($seekId);
+                    DataCenter::$server->task(['code' => DISPATCH_RANGE]);
                 }
                 if ($player->getType() == 'hide') {
                     $hideId = $player->getId();
@@ -102,6 +107,7 @@ class Logic
                     ]);
                 }
             }
+            unset(DataCenter::$global['rooms'][$roomId]);
         }
     }
 
@@ -134,6 +140,11 @@ class Logic
         }
     }
 
+    /**
+     * 创建一个定时器,在规定时间内判断游戏结果
+     * @param $roomId
+     * @return int
+     */
     public function createGameTimer($roomId)
     {
         // 创建一个定时器，如果在规定时间内还没结束游戏，就默认判定躲藏者赢
@@ -154,6 +165,8 @@ class Logic
                         Sender::sendMessage($hideId, Sender::MSG_GAME_OVER, [
                             'winner' => $hideId
                         ]);
+                        DataCenter::setRangePlayer($hideId);
+                        DataCenter::$server->task(['code' => DISPATCH_RANGE]);
                     }
                 }
                 unset(DataCenter::$global['rooms'][$roomId]);

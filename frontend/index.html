@@ -58,9 +58,19 @@
             <div class="layui-card-header">玩家ID: <span>{{ playerId }}</span> &nbsp;&nbsp;&nbsp; <span>当前在线人数:</span> {{ onlinePlayers }} </div>
             <div class="layui-card-header" v-if="playerType"><b>角色：</b>{{ playerType == 'hide' ? '躲藏者' : '追赶者' }}</div>
             <div class="layui-card-header" v-if="timeLimit"><b>剩余时间：</b>{{ timeLimit }}秒</div>
-            <div class="layui-card-body">
+            <div class="layui-card-body match-btn">
                 <button type="button" class="layui-btn" @click="matchPlayer">匹配</button>
             </div>
+            <div class="layui-card-body dis-match-btn" style="display: none">
+                <button type="button" class="layui-btn" @click="disMatchPlayer">取消匹配</button>
+            </div>
+        </div>
+        <div v-if="rangePlayer">
+            <p>玩家排行</p>
+            <template v-for="times, player in rangePlayer">
+                玩家：{{player}} 胜利次数：{{times}}
+                <br>
+            </template>
         </div>
         <div v-if="matching" style="display: inline">
             匹配中.....
@@ -103,12 +113,11 @@
         </div>
 
     </div>
-    <script src="https://cdn.bootcss.com/axios/0.19.0/axios.js"></script>
+    <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
     <script>
         var app = new Vue({
             el: '#app',
             data: {
-                message: 'Hello Vue',
                 websock: null,
                 playerId: '',
                 roomId: null,
@@ -118,22 +127,17 @@
                 timeLimit: null,
                 timerId: null,
                 onlinePlayers: 0,
+                rangePlayer: null
             },
             created(){
                 this.initPlayerId();
                 this.initWebSocket();
-                // 在线人数
-                //this.getServerInfo();
                 this.initDirectionKey();
             },
             destroyed() {
                 this.websock.close();
             },
             methods: {
-                getServerInfo(){
-                    axios.get('http://localhost:8502?action=get_online_player')
-                        .then(response => (this.onlinePlayers = response.data.online_player));
-                },
                 initPlayerId(){
                     this.playerId = 'player_' + Math.round(Math.random() * 1000);
                 },
@@ -186,6 +190,15 @@
                 matchPlayer(){
                     let actions = {"code":600};
                     this.matching = true;
+                    $('.match-btn').css('display', 'none');
+                    $('.dis-match-btn').css('display', 'block');
+                    this.websocketonsend(actions);
+                },
+                disMatchPlayer(){
+                    let actions = {"code":700};
+                    $('.match-btn').css('display', 'block');
+                    $('.dis-match-btn').css('display', 'none');
+                    this.matching = false;
                     this.websocketonsend(actions);
                 },
                 startRoom(){
@@ -212,6 +225,7 @@
                             this.roomId = serverData.room_id;
                             this.playerType = serverData.player_type;
                             this.startRoom();
+                            $('.dis-match-btn').css('display', 'none');
                             break;
                         case 1004:
                             this.mapData = serverData.map_data;
@@ -229,9 +243,13 @@
                             } else {
                                 alert(this.playerId + "你输了");
                             }
+                            $('.match-btn').css('display', 'block');
                             break;
                         case 9000:
                             this.onlinePlayers = serverData.onlinePlayers;
+                            break;
+                        case 10001:
+                            this.rangePlayer = serverData.playersRange;
                             break;
 
                     }

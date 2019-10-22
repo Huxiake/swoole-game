@@ -76,6 +76,7 @@ class Server
         }
         // 开启一个异步任务推送在线人数的更新
         $server->task(['code' => self::CLIENT_CODE_ONLINE_PLAYERS]);
+        $server->task(['code' => DISPATCH_RANGE]);
     }
 
     public function onMessage( $server, $request )
@@ -95,13 +96,16 @@ class Server
             case self::CLIENT_CODE_DIRECTION:
                 $this->logic->movePlayer($playerId, $clientData['direction']);
                 break;
+            case DIS_MATCH_PLAYER_CODE: // 取消匹配
+                $this->logic->dismatchPlayer($playerId);
+                break;
         }
     }
 
     public function onClose( $server, $fd )
     {
         DataCenter::log(sprintf("client %d close", $fd));
-        DataCenter::delPlayerId($fd);
+        DataCenter::delPlayerInfo($fd);
     }
 
     /*  ------------------------------        ------------------------------------   */
@@ -140,6 +144,12 @@ class Server
                     Sender::sendMessage($player, 9000, ['onlinePlayers' => DataCenter::hLenOnlinePlayer()]);
                 }
                 return true;
+            case DISPATCH_RANGE: // 实时推送排名数据
+                $playerIds = array_keys(DataCenter::getAllOnlinePlayers());
+                foreach ( $playerIds as $player ) {
+                    Sender::sendMessage($player, 10001, ['playersRange' => DataCenter::getRangePlayers()]);
+                }
+                break;
         }
     }
 

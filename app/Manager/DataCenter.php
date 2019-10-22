@@ -25,34 +25,26 @@ class DataCenter
 
     public static function initDataCenter()
     {
-        $key = self::PREFIX_KEY . ":player_wait_list";
-        self::redis()->del($key);
+        $player_id_table        = self::PREFIX_KEY . ':player_id';
+        self::redis()->del($player_id_table);
 
-        $key = self::PREFIX_KEY . ':player_id*';
-        $player_id_keys = self::redis()->keys($key);
-        foreach ($player_id_keys as $val) {
-            self::redis()->del($val);
-        }
+        $player_fd_table        = self::PREFIX_KEY . ':player_fd';
+        self::redis()->del($player_fd_table);
 
-        $key = self::PREFIX_KEY . ':player_fd*';
-        $player_fd_keys = self::redis()->keys($key);
-        foreach ($player_fd_keys as $val) {
-            self::redis()->del($val);
-        }
+        $player_room_table      = self::PREFIX_KEY . ':room';
+        self::redis()->del($player_room_table);
 
-        $key = self::PREFIX_KEY . ':room_id*';
-        $room_id_keys = self::redis()->keys($key);
-        foreach ($room_id_keys as $val) {
-            self::redis()->del($val);
-        }
+        $player_online_table    = self::PREFIX_KEY . ':online';
+        self::redis()->del($player_online_table);
 
-        $onlineKey = self::PREFIX_KEY . ':online:';
-        self::redis()->del($onlineKey);
+        $player_seek_wait_table = self::PREFIX_KEY . ':player_wait_seek_list';
+        self::redis()->del($player_seek_wait_table);
 
-        $seekWaitkey = self::PREFIX_KEY . ':player_wait_seek_list';
-        self::redis()->del($seekWaitkey);
-        $hideWaitkey = self::PREFIX_KEY . ':player_wait_hide_list';
-        self::redis()->del($hideWaitkey);
+        $player_hide_wait_table = self::PREFIX_KEY . ':player_wait_hide_list';
+        self::redis()->del($player_hide_wait_table);
+
+        $player_range_table     = self::PREFIX_KEY . ':range';
+        self::redis()->del($player_range_table);
     }
 
     /**
@@ -89,15 +81,20 @@ class DataCenter
         return self::redis()->sPop($key);
     }
 
-    public static function delPlayerFromWaitList($playerId, $playerType = 0)
+    /**
+     * 将玩家重匹配队列中删除
+     * @return int
+     */
+    public static function delPlayerFromWaitList($playerId)
     {
-        if ($playerType == Player::PLAYER_TYPE_SEEK) {
-            $key = self::PREFIX_KEY . ":player_wait_seek_list";
-        } elseif ($playerType == Player::PLAYER_TYPE_HIDE) {
-            $key = self::PREFIX_KEY . ":player_wait_hide_list";
+        if (self::redis()->sIsMember(self::PREFIX_KEY . ":player_wait_seek_list", $playerId)) {
+            self::redis()->sRem(self::PREFIX_KEY . ":player_wait_seek_list", $playerId);
         }
-        self::redis()->sRem($key, $playerId);
+        if (self::redis()->sIsMember(self::PREFIX_KEY . ":player_wait_hide_list", $playerId)) {
+            self::redis()->sRem(self::PREFIX_KEY . ":player_wait_hide_list", $playerId);
+        }
     }
+
     /**
      * 获取匹配队列人数
      * @return int
@@ -112,6 +109,7 @@ class DataCenter
         return self::redis()->sCard($key);
     }
 
+    /*-------------------------- 基础数据对应 ------------------------------------*/
     /**
      * 设置玩家客户端fd 对应 玩家ID
      * @param $playerId
@@ -119,8 +117,9 @@ class DataCenter
      */
     public static function setPlayerId($playerId, $fd)
     {
-        $key = self::PREFIX_KEY . ':player_id:' . $fd;
-        self::redis()->set($key, $playerId);
+        $key   = self::PREFIX_KEY . ':player_fd';
+        $field = self::PREFIX_KEY . ':player_id:' . $fd;
+        self::redis()->hSet($key, $field, $playerId);
     }
 
     /**
@@ -130,8 +129,9 @@ class DataCenter
      */
     public static function getPlayerId($fd)
     {
-        $key = self::PREFIX_KEY . ':player_id:' . $fd;
-        return self::redis()->get($key);
+        $key   = self::PREFIX_KEY . ':player_fd';
+        $field = self::PREFIX_KEY . ':player_id:' . $fd;
+        return self::redis()->hGet($key, $field);
     }
 
     /**
@@ -140,8 +140,9 @@ class DataCenter
      */
     public static function delPlayerId($fd)
     {
-        $key = self::PREFIX_KEY . ':player_id:' . $fd;
-        self::redis()->del($key);
+        $key   = self::PREFIX_KEY . ':player_fd';
+        $field = self::PREFIX_KEY . ':player_id:' . $fd;
+        self::redis()->hDel($key, $field);
     }
 
     /**
@@ -151,8 +152,9 @@ class DataCenter
      */
     public static function setPlayerFd($playerId, $fd)
     {
-        $key = self::PREFIX_KEY . ':player_fd:' . $playerId;
-        self::redis()->set($key, $fd);
+        $key   = self::PREFIX_KEY . ':player_id';
+        $field = self::PREFIX_KEY . ':player_fd:' . $playerId;
+        self::redis()->hSet($key, $field, $fd);
     }
 
     /**
@@ -162,8 +164,9 @@ class DataCenter
      */
     public static function getPlayerFd($playerId)
     {
-        $key = self::PREFIX_KEY . ':player_fd:' . $playerId;
-        return self::redis()->get($key);
+        $key   = self::PREFIX_KEY . ':player_id';
+        $field = self::PREFIX_KEY . ':player_fd:' . $playerId;
+        return self::redis()->hGet($key, $field);
     }
 
     /**
@@ -172,8 +175,9 @@ class DataCenter
      */
     public static function delPlayerFd($playerId)
     {
-        $key = self::PREFIX_KEY . ':player_fd:' . $playerId;
-        self::redis()->del($key);
+        $key   = self::PREFIX_KEY . ':player_id';
+        $field = self::PREFIX_KEY . ':player_fd:' . $playerId;
+        self::redis()->hDel($key, $field);
     }
 
     /**
@@ -198,6 +202,7 @@ class DataCenter
         self::delPlayerFd($playerId);
         self::delPlayerId($fd);
         self::delOnlinePlayerId($playerId);
+        self::delPlayerFromWaitList($playerId);
     }
 
     /**
@@ -212,53 +217,68 @@ class DataCenter
     /* -----------------------------  将玩家与房间绑定  ------------------------------------ */
     public static function setPlayerRoomId($playerId, $roomId)
     {
-        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
-        self::redis()->set($key, $roomId);
+        $key   = self::PREFIX_KEY . ':room';
+        $field = self::PREFIX_KEY . ':room_id:' . $playerId;
+        self::redis()->hSet($key, $field, $roomId);
     }
 
     public static function getPlayerRoomId($playerId)
     {
-        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
-        return self::redis()->get($key);
+        $key   = self::PREFIX_KEY . ':room';
+        $field = self::PREFIX_KEY . ':room_id:' . $playerId;
+        return self::redis()->hGet($key, $field);
     }
 
     public static function delPlayerRoomId($playerId)
     {
-        $key = self::PREFIX_KEY . ':room_id:' . $playerId;
-        self::redis()->del($key);
+        $key   = self::PREFIX_KEY . ':room';
+        $field = self::PREFIX_KEY . ':room_id:' . $playerId;
+        self::redis()->hDel($key, $field);
     }
 
     /*-----------------------Hash 操作---------------------------------*/
 
     public static function setOnlinePlayer($playerId)
     {
-        $key = self::PREFIX_KEY . ':online:';
+        $key = self::PREFIX_KEY . ':online';
         self::redis()->hSet($key, $playerId, 1);
     }
 
     public static function getOnlinePlayer($playerId)
     {
-        $key = self::PREFIX_KEY . ':online:';
+        $key = self::PREFIX_KEY . ':online';
         return self::redis()->hGet($key, $playerId);
     }
 
     public static function getAllOnlinePlayers()
     {
-        $key = self::PREFIX_KEY . ':online:';
+        $key = self::PREFIX_KEY . ':online';
         return self::redis()->hGetAll($key);
     }
 
     public static function delOnlinePlayerId($playerId)
     {
-        $key = self::PREFIX_KEY . ':online:';
+        $key = self::PREFIX_KEY . ':online';
         self::redis()->hDel($key, $playerId);
     }
 
     public static function hLenOnlinePlayer()
     {
-        $key = self::PREFIX_KEY . ':online:';
+        $key = self::PREFIX_KEY . ':online';
         return self::redis()->hLen($key);
     }
+    /*-----------------排名------------------------------*/
 
+    public static function setRangePlayer($playerId)
+    {
+        $key = self::PREFIX_KEY . ':range';
+        self::redis()->zIncrBy($key, 1, $playerId);
+    }
+
+    public static function getRangePlayers()
+    {
+        $key = self::PREFIX_KEY . ':range';
+        return self::redis()->zRevRange($key, 0, 1000, true);
+    }
 
 }
