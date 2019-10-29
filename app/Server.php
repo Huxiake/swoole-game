@@ -8,6 +8,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use App\Manager\DataCenter;
 use App\Manager\Logic;
 use App\Manager\TaskManager;
+use App\Manager\Dispatch;
 use App\Manager\Sender;
 use App\Model\Player;
 class Server
@@ -26,7 +27,6 @@ class Server
     const CLIENT_CODE_MATCH_PLAYER = 600;
     const CLIENT_CODE_BEGIN_GAME = 601;
     const CLIENT_CODE_DIRECTION = 602;
-    const CLIENT_CODE_ONLINE_PLAYERS = 900;
 
     private $ws;
     private $logic;
@@ -75,8 +75,8 @@ class Server
             DataCenter::setPlayerInfo($playerId, $request->fd);
         }
         // 开启一个异步任务推送在线人数的更新
-        $server->task(['code' => self::CLIENT_CODE_ONLINE_PLAYERS]);
-        $server->task(['code' => DISPATCH_RANGE]);
+        $server->task(['code' => Dispatch::DISPATCH_ONLINE_CODE]);
+        $server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
     }
 
     public function onMessage( $server, $request )
@@ -99,13 +99,28 @@ class Server
             case DIS_MATCH_PLAYER_CODE: // 取消匹配
                 $this->logic->dismatchPlayer($playerId);
                 break;
+            case 603: // 玩家邀请
+                $opponentId = $clientData['opponent_id'];
+                $this->logic->makeChallange($opponentId, $playerId);
+                break;
+            case 604: // 接收挑战
+                // 创建房间并开始游戏
+                $challengerId = $clientData['challenger_id'];
+                $this->logic->acceptChallenge($challengerId, $playerId);
+                break;
+            case 605: // 玩家拒绝挑战
+                $challengerId = $clientData['challenger_id'];
+                Sender::sendMessage($challengerId, 1007, ['msg' => '对方拒绝了你的挑战']);
+                break;
         }
     }
 
     public function onClose( $server, $fd )
     {
         DataCenter::log(sprintf("client %d close", $fd));
+        $this->logic->closeRoom($fd);
         DataCenter::delPlayerInfo($fd);
+        Dispatch::broadcastOnline();
     }
 
     /*  ------------------------------        ------------------------------------   */
@@ -126,9 +141,7 @@ class Server
         // 执行各种逻辑,根据投递过来的code
         switch ($data['code']) {
             case TaskManager::TASK_CODE_FIND_PLAYER: // 匹配玩家
-                // 追赶者，需要匹配隐藏者
                 $players = TaskManager::findPlayer($data['player_id'], $data['player_type']);
-//                $players = TaskManager::findPlayer();
                 if (!empty($players)) {
                     $result['data'] = $players;
                 }
@@ -138,17 +151,11 @@ class Server
                     return $result;
                 }
                 break;
-            case self::CLIENT_CODE_ONLINE_PLAYERS: // 推送在线人数更新
-                $playerIds = array_keys(DataCenter::getAllOnlinePlayers());
-                foreach ( $playerIds as $player ) {
-                    Sender::sendMessage($player, 9000, ['onlinePlayers' => DataCenter::hLenOnlinePlayer()]);
-                }
-                return true;
-            case DISPATCH_RANGE: // 实时推送排名数据
-                $playerIds = array_keys(DataCenter::getAllOnlinePlayers());
-                foreach ( $playerIds as $player ) {
-                    Sender::sendMessage($player, 10001, ['playersRange' => DataCenter::getRangePlayers()]);
-                }
+            case Dispatch::DISPATCH_ONLINE_CODE: // 推送在线人数更新
+                Dispatch::broadcastOnline();
+                break;
+            case Dispatch::DISPATCH_RANGE_CODE: // 实时推送排名数据
+                Dispatch::broadcastRanger();
                 break;
         }
     }

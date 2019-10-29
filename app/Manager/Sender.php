@@ -13,6 +13,7 @@ class Sender
     const MSG_GAME_INFO = 1004;
     const MSG_GAME_OVER = 1005;
 
+
     const CODE_MSG = [
         self::MSG_ROOM_ID => '房间ID',
         self::MSG_WAIT_PLAYER => '正在等待其他玩家....',

@@ -40,14 +40,5 @@ class TaskManager
             'seek' => ['seek_player' => $seekPlayer, 'type' => 'seek'],
             'hide' => ['hide_player' => $hidePlayer, 'type' => 'hide']
         ];
-//        if (DataCenter::getPlayerWaitListLen() >= 2) {
-//            $redPlayer = DataCenter::popPlayerFromWaitList();
-//            $bluePlayer = DataCenter::popPlayerFromWaitList();
-//            return [
-//                'red_player' => $redPlayer,
-//                'blue_player' => $bluePlayer,
-//            ];
-//        }
-//        return false;
     }
 }

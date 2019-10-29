@@ -9,7 +9,9 @@ define('MATCH_PLAYER_CODE', 600);
 // 游戏时间限制
 const GAME_TIME_LIMIT = 20;
 
+
 // 取消匹配
 const DIS_MATCH_PLAYER_CODE = 700;
 
-const DISPATCH_RANGE = 10001;
+//
+const NOTICE_ESCAPE = 40000;

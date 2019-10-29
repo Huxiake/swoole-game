@@ -26,6 +26,30 @@ class Logic
         DataCenter::delPlayerFromWaitList($playerId);
     }
 
+    /**
+     * 当玩家在没有结束游戏断开连接时执行
+     * @param $playerFd
+     */
+    public function closeRoom($playerFd)
+    {
+        $playerId = DataCenter::getPlayerId($playerFd);
+        $roomId   = DataCenter::getPlayerRoomId($playerId);
+        $gameManager = ['manager'];
+        if ( isset(DataCenter::$global['rooms'][$roomId]) ) {
+            $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
+            $players = $gameManager->getPlayers();
+            foreach ( $players as $player => $obj ) {
+                if ( $player != $playerId ) {
+                    Sender::sendMessage($player, NOTICE_ESCAPE, ['msg' => '你的对手跑啦!!']);
+                    DataCenter::setRangePlayer($player);
+                    DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
+                }
+                DataCenter::delPlayerRoomId($player);
+            }
+            unset(DataCenter::$global['rooms'][$roomId]);
+        }
+    }
+
     // 创建房间
     public function createRoom($seekPlayer, $hidePlayer)
     {
@@ -98,7 +122,7 @@ class Logic
                         'winner' => $seekId
                     ]);
                     DataCenter::setRangePlayer($seekId);
-                    DataCenter::$server->task(['code' => DISPATCH_RANGE]);
+                    DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
                 }
                 if ($player->getType() == 'hide') {
                     $hideId = $player->getId();
@@ -166,7 +190,7 @@ class Logic
                             'winner' => $hideId
                         ]);
                         DataCenter::setRangePlayer($hideId);
-                        DataCenter::$server->task(['code' => DISPATCH_RANGE]);
+                        DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
                     }
                 }
                 unset(DataCenter::$global['rooms'][$roomId]);
@@ -174,6 +198,53 @@ class Logic
         });
     }
 
+    /**
+     * 发起挑战
+     * @param $opponentId
+     * @param $playerId
+     */
+    public function makeChallange($opponentId, $playerId)
+    {
+        // 判断opponent是否在线及是否在游戏中
+        if ( !DataCenter::getOnlinePlayer($opponentId) ) {
+            Sender::sendMessage($playerId, 1007, ['msg' => '对方不在线']);
+            return;
+        }
+        if ( DataCenter::getPlayerRoomId($opponentId) ) {
+            Sender::sendMessage($playerId, 1007, ['msg' => '对方正在游戏中']);
+            return;
+        }
+        Sender::sendMessage($opponentId, 1008, ['challenger_id' => $playerId ]);
+    }
+
+    /**
+     * 接收挑战  随机分配角色给挑战者和被挑战者
+     * @param $challengeId
+     * @param $challengedId
+     */
+    public function acceptChallenge($challengeId, $challengedId)
+    {
+        // 检测玩家是否在线
+        if ( !DataCenter::getOnlinePlayer($challengeId) ) {
+            Sender::sendMessage($challengedId, 1007, ['msg' => '对方掉线了!!']);
+            return;
+        }
+        // 随机角色分配给两个玩家
+        $playersArr = [$challengeId, $challengedId];
+        shuffle($playersArr);
+        list($challengePLayer,$challengedPLayer) = $playersArr;
+        $seek_player = ['seek_player' => $challengePLayer,  'type' => 'seek'];
+        $hide_player = ['hide_player' => $challengedPLayer, 'type' => 'hide'];
+        $this->createRoom($seek_player, $hide_player);
+    }
+
+    /**
+     * 获取地图数据
+     * @param $mapData
+     * @param $x
+     * @param $y
+     * @return array
+     */
     public function getNearMap($mapData, $x, $y)
     {
         $l_view = ($x - self::PLAYER_DISPLAY_LEN) < 0 ? 0 : $x - self::PLAYER_DISPLAY_LEN;

@@ -75,6 +75,13 @@
         <div v-if="matching" style="display: inline">
             匹配中.....
         </div>
+        <div v-else>
+            <div v-if="!roomId" style="padding-top: 5px;">
+                对手ID：
+                <input type="text" v-model="opponentId">
+                <button @click="makeChallenge">挑战</button>
+            </div>
+        </div>
         <br /><br />
 
         <div v-if="mapData" class="containerApp">
@@ -127,7 +134,8 @@
                 timeLimit: null,
                 timerId: null,
                 onlinePlayers: 0,
-                rangePlayer: null
+                rangePlayer: null,
+                opponentId:''
             },
             created(){
                 this.initPlayerId();
@@ -138,6 +146,21 @@
                 this.websock.close();
             },
             methods: {
+                makeChallenge(){ // 向对手发起挑战
+                    if (!this.opponentId) {
+                        alert("请输入对手ID");
+                        return false;
+                    }
+                    if ( this.playerId === this.opponentId ) {
+                        alert("不能对自己发起挑战!!!");
+                        return false;
+                    }
+                    let actions = {
+                        code: 603,
+                        opponent_id: this.opponentId
+                    };
+                    this.websocketonsend(actions);
+                },
                 initPlayerId(){
                     this.playerId = 'player_' + Math.round(Math.random() * 1000);
                 },
@@ -244,14 +267,37 @@
                                 alert(this.playerId + "你输了");
                             }
                             $('.match-btn').css('display', 'block');
+                            window.clearInterval(this.timerId);
+                            this.timerId = null;
+                            this.roomId = '';
                             break;
-                        case 9000:
+                        case 10002:
                             this.onlinePlayers = serverData.onlinePlayers;
                             break;
                         case 10001:
                             this.rangePlayer = serverData.playersRange;
                             break;
-
+                        case 40000:
+                            alert(serverData.msg);
+                            break;
+                        case 1007:
+                            alert(serverData.msg);
+                            break;
+                        case 1008:  // 响应玩家挑战
+                            var challengerId = serverData.challenger_id;
+                            var msg = "玩家 " + challengerId + " 邀请你进行对战，是否接受?";
+                            var actions = {
+                                "code": 604,
+                                "challenger_id": challengerId
+                            };
+                            if (!confirm(msg)) {
+                                actions = {
+                                    "code": 605,
+                                    "challenger_id": challengerId
+                                };
+                            }
+                            this.websocketonsend(actions);
+                            break;
                     }
                 },
                 websocketonsend(Data){
