@@ -62,6 +62,8 @@ class Logic
     {
         DataCenter::setPlayerRoomId($playerId, $roomId);
         $playerFd = DataCenter::getPlayerFd($playerId);
+        // 这里的bind需要注意，因为同一个连接后续的请求都会发送到前一个请求处理的进程，进程间的内存隔离使得这里需要将两个请求
+        // 发送到同一个进程里面去处理。
         DataCenter::$server->bind($playerFd, crc32($roomId));
         Sender::sendMessage($playerId, Sender::MSG_ROOM_ID, ['room_id' => $roomId, 'player_type' => $playerType]);
     }
