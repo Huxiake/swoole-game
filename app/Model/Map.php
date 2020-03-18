@@ -1,7 +1,7 @@
 <?php
 /**
  * date 2019/10/8 13:56
- * create by PHPStrom
+ * create by PHPStorm
  */
 
 namespace App\Model;
@@ -32,6 +32,12 @@ class Map
         $this->width  = $width;
     }
 
+    /**
+     * 获取地图数据|二维数组
+     *
+     * @desc getMapData
+     * @return array
+     */
     public function getMapData()
     {
         return $this->map;

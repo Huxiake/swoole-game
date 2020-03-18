@@ -1,7 +1,7 @@
 <?php
 /**
  * date 2019/10/8 13:54
- * create by PHPStrom
+ * create by PHPStorm
  */
 
 namespace App\Manager;
@@ -18,11 +18,23 @@ class Game
         $this->gameMap = new Map(12, 12);
     }
 
+    /**
+     * 获取房间内的玩家
+     *
+     * @desc getPlayers
+     * @return array
+     */
     public function getPlayers()
     {
         return $this->players;
     }
 
+    /**
+     * 获取地图数据
+     *
+     * @desc getMapData
+     * @return array
+     */
     public function getMapData()
     {
         return $this->gameMap->getMapData();
@@ -60,7 +72,9 @@ class Game
     }
 
     /**
-     * 打印地图
+     * 打印地图,终端测试
+     *
+     * @desc printGameMap
      */
     public function printGameMap()
     {
@@ -84,7 +98,7 @@ class Game
     }
 
     /**
-     * 判断移动的方向是否能走 ? 如果下一步移动的方向是HIDE 或者 SEEK 怎么办
+     * 判断移动的方向是否能走
      * @param $player
      * @param $direction
      * @return bool

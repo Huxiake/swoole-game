@@ -1,0 +1,21 @@
+{
+    "app"   :   {
+        "host"          : "0.0.0.0",
+        "port"          :   8501,
+        "front_port"    :   8502
+    },
+
+    "websock" :   {
+        "worker_num"        :   4,
+        "daemonize"         :   0,
+        "task_worker_num"   :   4,
+        "dispatch_mode"     :   5
+    },
+
+    "redis" :   {
+        "host"   :  "127.0.0.1",
+        "port"   :  "6379",
+        "auth"   :  "",
+        "db"     :  1
+    }
+}

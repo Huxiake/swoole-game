@@ -11,6 +11,7 @@
         .containerApp{
             display: flex;
             margin-left: 100px;
+            margin-top: 180px;
         }
         .gameItem {
             display: inline-block;
@@ -50,11 +51,27 @@
         .clickButton {
             background: #dddddd;
         }
+
+        .other-id {
+            padding-left: 15px;
+            text-align: left;
+        }
+        .other-id-input {
+            width: 130px;
+            margin-left: -140px;
+            margin-right: 20px;
+        }
+        .container {
+            width: 300px;
+            margin-right: 50px;
+            margin-left: 50px;
+            margin-top: 190px
+        }
     </style>
 </head>
 <body>
     <div id="app">
-        <div class="layui-card" style="width: 500px; margin-left: 50px; margin-top: 10px;">
+        <div class="layui-card layui-layout-right" style="width: 500px; margin-left: 50px; margin-top: 10px;">
             <div class="layui-card-header">玩家ID: <span>{{ playerId }}</span> &nbsp;&nbsp;&nbsp; <span>当前在线人数:</span> {{ onlinePlayers }} </div>
             <div class="layui-card-header" v-if="playerType"><b>角色：</b>{{ playerType == 'hide' ? '躲藏者' : '追赶者' }}</div>
             <div class="layui-card-header" v-if="timeLimit"><b>剩余时间：</b>{{ timeLimit }}秒</div>
@@ -64,28 +81,53 @@
             <div class="layui-card-body dis-match-btn" style="display: none">
                 <button type="button" class="layui-btn" @click="disMatchPlayer">取消匹配</button>
             </div>
-        </div>
-        <div v-if="rangePlayer">
-            <p>玩家排行</p>
-            <template v-for="times, player in rangePlayer">
-                玩家：{{player}} 胜利次数：{{times}}
-                <br>
-            </template>
-        </div>
-        <div v-if="matching" style="display: inline">
-            匹配中.....
-        </div>
-        <div v-else>
-            <div v-if="!roomId" style="padding-top: 5px;">
-                对手ID：
-                <input type="text" v-model="opponentId">
-                <button @click="makeChallenge">挑战</button>
+            <div v-if="matching" style="display: inline; padding-left: 15px;">
+                匹配中......
+            </div>
+            <div v-else>
+                <div v-if="!roomId" style="padding-top: 5px;">
+<!--                    对手ID：-->
+<!--                    <input class="layui-input" type="text" v-model="opponentId">-->
+
+                    <div class="layui-form-item">
+                        <label class="layui-form-label other-id">对手ID：</label>
+                        <div class="layui-input-block" style="float: left">
+                            <input type="text" name="text" class="layui-input other-id-input" v-model="opponentId">
+                        </div>
+                        <button type="button" class="layui-btn" @click="makeChallenge">挑战</button>
+                    </div>
+
+                </div>
+            </div>
+            <hr>
+            <div class="layui-card-body">
+                <div v-if="rangePlayer">
+                    <h3>在线玩家排行:</h3>
+
+                    <template v-for="times, player in rangePlayer">
+                        玩家：{{player}} 胜利次数：{{times}}
+                        <br>
+                    </template>
+                </div>
             </div>
         </div>
-        <br /><br />
+
 
         <div v-if="mapData" class="containerApp">
-            <div class="container" style="width: 300px; margin-right: 50px;margin-top: 190px">
+            <div class="map">
+                <template v-for="column in mapData">
+                    <div>
+                        <template v-for="item in column">
+                            <div v-if="item==playerId" class="gameItem player">{{playerId}}</div>
+                            <div v-else-if="item==0" class="gameItem wall">墙</div>
+                            <div v-else-if="item==1" class="gameItem road">路</div>
+                            <div v-else class="gameItem player">{{item}}</div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <div class="container" style="">
                 <div class="layui-row">
                     <div class="layui-col-md4 layui-col-md-offset4">
                         <button data-direction="up" @mousedown="clickDirect('up')" class="layui-btn"><i class="layui-icon">&#xe619;</i></button>
@@ -105,18 +147,7 @@
                     </div>
                 </div>
             </div>
-            <div class="map">
-                <template v-for="column in mapData">
-                    <div>
-                        <template v-for="item in column">
-                            <div v-if="item==playerId" class="gameItem player">{{playerId}}</div>
-                            <div v-else-if="item==0" class="gameItem wall">墙</div>
-                            <div v-else-if="item==1" class="gameItem road">路</div>
-                            <div v-else class="gameItem player">{{item}}</div>
-                        </template>
-                    </div>
-                </template>
-            </div>
+
         </div>
 
     </div>
@@ -230,7 +261,7 @@
                     this.matching = false;
                 },
                 initWebSocket(){
-                    const wsurl = 'ws://192.168.12.111:8501?player_id=' + this.playerId;
+                    const wsurl = 'ws://127.0.0.1:8501?player_id=' + this.playerId;
                     this.websock = new WebSocket(wsurl);
                     this.websock.onmessage = this.websocketonmessage;
                     this.websock.onopen = this.websocketonopen;

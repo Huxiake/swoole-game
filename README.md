@@ -1,12 +1,53 @@
-# swoole-game
+# HideAndSeek
 
-一个简单的swoole小游戏
-游戏使用 8501 和 8502 两个端口，请确保这两个端口可用
+**基于swoole的你追我赶的网页小游戏**
 
-启动游戏需要修改前端的 ws 连接地址
+# 目录结构
+```
+HideAndSeek
+├── app
+│   ├── Lib
+│   │   ├── Env.php             # 基础配置
+│   │   └── Redis.php           # redis单例子
+│   ├── Manager
+│   │   ├── DataCenter.php      # 数据中心
+│   │   ├── Dispatch.php        # 广播类
+│   │   ├── Game.php            # 游戏数据类
+│   │   ├── Logic.php           # 游戏逻辑类
+│   │   ├── Sender.php          # 向客户端发送数据统一格式类
+│   │   └── TaskManager.php     # 异步task类
+│   ├── Model
+│   │   ├── Map.php             # 地图
+│   │   └── Player.php          # 玩家
+│   ├── Server
+│   │   ├── Websocket.php       # ws服务
+├── bootstrap
+│   ├── code.php                # 全局code
+│   └── function.php            # 全局function
+├── config
+│   └── app.json                # 配置
+├── frontend
+│   └── index.html
+├── composer.json
+├── composer.lock
+├── service                     # 服务启动入口
+└── vendor
+    ├── autoload.php
+    └── composer
+```
 
-进入 app/
+# app 配置
+```php
+"host"          :   "0.0.0.0",
+"port"          :   8501,
+"front_port"    :   8502
+```
 
-php Server.php
+`port` 为ws监听端口 `front_port` 为http监听端口,根据自己需求修改
 
-> 不会写前端，页面很丑很难看，功能待完善
+# 应用启动
+
+进入根目录
+```php
+php service
+```

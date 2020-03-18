@@ -42,7 +42,7 @@ class Logic
                 if ( $player != $playerId ) {
                     Sender::sendMessage($player, NOTICE_ESCAPE, ['msg' => '你的对手跑啦!!']);
                     DataCenter::setRangePlayer($player);
-                    DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
+                    DataCenter::$server->task(['code' => DISPATCH_RANGE_CODE]);
                 }
                 DataCenter::delPlayerRoomId($player);
             }
@@ -124,7 +124,7 @@ class Logic
                         'winner' => $seekId
                     ]);
                     DataCenter::setRangePlayer($seekId);
-                    DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
+                    DataCenter::$server->task(['code' => DISPATCH_RANGE_CODE]);
                 }
                 if ($player->getType() == 'hide') {
                     $hideId = $player->getId();
@@ -137,6 +137,11 @@ class Logic
         }
     }
 
+    /**
+     * 发送游戏数据
+     * @desc sendGameInfo
+     * @param $roomId
+     */
     private function sendGameInfo($roomId)
     {
         $gameManager = DataCenter::$global['rooms'][$roomId]['manager'];
@@ -192,7 +197,7 @@ class Logic
                             'winner' => $hideId
                         ]);
                         DataCenter::setRangePlayer($hideId);
-                        DataCenter::$server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
+                        DataCenter::$server->task(['code' => DISPATCH_RANGE_CODE]);
                     }
                 }
                 unset(DataCenter::$global['rooms'][$roomId]);
@@ -249,11 +254,24 @@ class Logic
      */
     public function getNearMap($mapData, $x, $y)
     {
-        $l_view = ($x - self::PLAYER_DISPLAY_LEN) < 0 ? 0 : $x - self::PLAYER_DISPLAY_LEN;
+        $l_view = ($x - self::PLAYER_DISPLAY_LEN) < 0  ? 0  : $x - self::PLAYER_DISPLAY_LEN;
         $r_view = ($x + self::PLAYER_DISPLAY_LEN) > 11 ? 11 : $x + self::PLAYER_DISPLAY_LEN;
-
-        $u_view = ($y - self::PLAYER_DISPLAY_LEN) < 0 ? 0 : $y - self::PLAYER_DISPLAY_LEN;
+        $u_view = ($y - self::PLAYER_DISPLAY_LEN) < 0  ? 0  : $y - self::PLAYER_DISPLAY_LEN;
         $d_view = ($y + self::PLAYER_DISPLAY_LEN) > 11 ? 11 : $y + self::PLAYER_DISPLAY_LEN;
+        if ($l_view == 0 && $x != self::PLAYER_DISPLAY_LEN) {
+            $r_view += 1;
+        }
+        if ($r_view == 11 && $x + self::PLAYER_DISPLAY_LEN != 11) {
+            $l_view -= 1;
+        }
+        if ($u_view == 0 && $y != self::PLAYER_DISPLAY_LEN) {
+            $d_view += 1;
+        }
+        if ($d_view == 11 && $y + self::PLAYER_DISPLAY_LEN != 11) {
+            $u_view -= 1;
+        }
+
+        // 总是保证 5*5
         $nearMapData = [];
         for ($id_x = $l_view; $id_x <= $r_view; $id_x++ ) {
             $temp = [];

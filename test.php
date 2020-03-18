@@ -1,7 +1,9 @@
 <?php
 
 require_once __DIR__.'/vendor/autoload.php';
+
 use App\Manager\Game;
+
 $redId = "red_player";
 
 $blueId = "blue_player";
@@ -21,6 +23,6 @@ while (1) {
     }
     sleep(1);
 }
-// 移动位置
-// 打印地图
-//$game->printGameMap();
+
+$game->printGameMap();
+

@@ -7,4 +7,5 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'ab0c534bc31f3503cb0d6a3ed43be270' => $baseDir . '/bootstrap/code.php',
+    'f11278ac3a17c3eefcfdab35acfb616b' => $baseDir . '/bootstrap/function.php',
 );

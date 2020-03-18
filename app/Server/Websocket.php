@@ -1,69 +1,117 @@
 <?php
 /**
- * date 2019/10/8 16:03
- * create by PHPStrom
+ * Created by PhpStorm
+ * User: slairmy
+ * Date: 2020/3/17
+ * Time: 11:49 下午
  */
+namespace App\Server;
 
-require_once __DIR__ . '/../vendor/autoload.php';
 use App\Manager\DataCenter;
 use App\Manager\Logic;
 use App\Manager\TaskManager;
 use App\Manager\Dispatch;
 use App\Manager\Sender;
-use App\Model\Player;
-class Server
-{
-    const HOST = '0.0.0.0';
-    const PORT = 8501;
-    const FRONT_PORT = 8502;
-    const CONFIG = [
-        'worker_num' => 4,
-        'enable_static_handler' => true,
-        'document_root' => __DIR__.'/../frontend/',
-        'daemonize' => 0,
-        'task_worker_num' => 4,
-        'dispatch_mode' => 5
-    ];
-    const CLIENT_CODE_MATCH_PLAYER = 600;
-    const CLIENT_CODE_BEGIN_GAME = 601;
-    const CLIENT_CODE_DIRECTION = 602;
 
+class Websocket{
+
+    const CLIENT_CODE_MATCH_PLAYER  = 600;
+    const CLIENT_CODE_BEGIN_GAME    = 601;
+    const CLIENT_CODE_DIRECTION     = 602;
+
+    /**
+     * ws配置信息
+     *
+     * @var array
+     */
+    private $_config = [];
+
+    /**
+     * ws对象
+     *
+     * @var \Swoole\WebSocket\Server
+     */
     private $ws;
+
+    /**
+     * logic实例
+     *
+     * @var Logic
+     */
     private $logic;
 
+    /**
+     * 构造函数
+     *
+     * Websocket constructor.
+     */
     public function __construct()
     {
+        // 游戏逻辑
         $this->logic = new Logic();
-        $this->ws = new \Swoole\WebSocket\Server(self::HOST, self::PORT);
-        $this->ws->set(self::CONFIG);
-        $this->ws->listen(self::HOST, self::FRONT_PORT, SWOOLE_SOCK_TCP);
+        $this->_config = env("websock");
+        if (empty($this->_config)) {
+            echo "请检查websock基础配置";
+            exit();
+        }
+        // 添加静态处理页面
+        $this->_config['enable_static_handler'] = true;
+        $this->_config['document_root'] = ROOT_PATH . "/frontend/";
+        $this->ws = new \Swoole\WebSocket\Server(env("app.host"), env("app.port"));
+        $this->ws->set($this->_config);
+        $this->ws->listen(env("app.host"), env("app.front_port"), SWOOLE_SOCK_TCP);
+    }
+
+    /**
+     * @desc start
+     */
+    public function start() :void
+    {
         $this->ws->on('start', [$this, 'onStart']);
         $this->ws->on('workerStart', [$this, 'onWorkerStart']);
         $this->ws->on('open', [$this, 'onOpen']);
         $this->ws->on('message', [$this, 'onMessage']);
         $this->ws->on('close', [$this, 'onClose']);
-        // http
-
         $this->ws->on('request', [$this, 'onRequest']);
-        // task
         $this->ws->on('task', [$this, 'onTask']);
         $this->ws->on('finish', [$this, 'onFinish']);
         $this->ws->start();
     }
 
+    /**
+     * 服务开启监听事件
+     *
+     * @desc onStart
+     * @param $server_name
+     */
     public function onStart( $server_name )
     {
         DataCenter::initDataCenter();
-        swoole_set_process_name( 'swoole-hide-seek' );
-        echo sprintf("master start (listening on %s:%d)\n", self::HOST, self::PORT);
+        // mac端这个函数有错误
+        //swoole_set_process_name( 'swoole-hide-seek' );
+        echo sprintf("master start (listening on %s:%d)\n", env("app.host"), env("app.port"));
     }
 
+    /**
+     * worker进程启动监听事件
+     *
+     * @desc onWorkerStart
+     * @param $server
+     * @param $workId
+     */
     public function onWorkerStart( $server, $workId )
     {
         echo "server :onWorkerStart, worker_id: {$server->worker_id}\n";
         DataCenter::$server = $server;
     }
 
+    /**
+     * 客户端连接监听事件
+     *
+     * @desc onOpen
+     * @param $server
+     * @param $request
+     */
     public function onOpen( $server, $request )
     {
         DataCenter::log(sprintf("client open fd: %d", $request->fd));
@@ -75,10 +123,17 @@ class Server
             DataCenter::setPlayerInfo($playerId, $request->fd);
         }
         // 开启一个异步任务推送在线人数的更新
-        $server->task(['code' => Dispatch::DISPATCH_ONLINE_CODE]);
-        $server->task(['code' => Dispatch::DISPATCH_RANGE_CODE]);
+        $server->task(['code' => DISPATCH_ONLINE_CODE]);
+        $server->task(['code' => DISPATCH_RANGE_CODE]);
     }
 
+    /**
+     * 接受客户端消息监听事件
+     *
+     * @desc onMessage
+     * @param $server
+     * @param $request
+     */
     public function onMessage( $server, $request )
     {
         DataCenter::log(sprintf("client fd %d send message: %s", $request->fd, $request->data));
@@ -115,6 +170,13 @@ class Server
         }
     }
 
+    /**
+     * 客户端断开连接监听事件
+     *
+     * @desc onClose
+     * @param $server
+     * @param $fd
+     */
     public function onClose( $server, $fd )
     {
         DataCenter::log(sprintf("client %d close", $fd));
@@ -123,8 +185,14 @@ class Server
         Dispatch::broadcastOnline();
     }
 
-    /*  ------------------------------        ------------------------------------   */
 
+    /**
+     * http请求监听事件
+     *
+     * @desc onRequest
+     * @param $request
+     * @param $response
+     */
     public function onRequest($request, $response)
     {
         if (isset($request->get['action']) && $request->get['action'] == 'get_online_player') {
@@ -133,7 +201,16 @@ class Server
         }
     }
 
-    /*  -----------------------------Task异步任务---------------------------------    */
+    /**
+     * task 异步任务监听事件
+     *
+     * @desc onTask
+     * @param $server
+     * @param $taskId
+     * @param $srcWorkId
+     * @param $data
+     * @return array
+     */
     public function onTask($server, $taskId, $srcWorkId, $data)
     {
         DataCenter::log("onTask", $data);
@@ -151,10 +228,10 @@ class Server
                     return $result;
                 }
                 break;
-            case Dispatch::DISPATCH_ONLINE_CODE: // 推送在线人数更新
+            case DISPATCH_ONLINE_CODE: // 推送在线人数更新
                 Dispatch::broadcastOnline();
                 break;
-            case Dispatch::DISPATCH_RANGE_CODE: // 实时推送排名数据
+            case DISPATCH_RANGE_CODE: // 实时推送排名数据
                 Dispatch::broadcastRanger();
                 break;
         }
@@ -171,5 +248,3 @@ class Server
         }
     }
 }
-
-new Server();

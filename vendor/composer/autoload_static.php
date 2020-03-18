@@ -8,9 +8,14 @@ class ComposerStaticInitfc00c18c9adf75cbdff824c31edaeda3
 {
     public static $files = array (
         'ab0c534bc31f3503cb0d6a3ed43be270' => __DIR__ . '/../..' . '/bootstrap/code.php',
+        'f11278ac3a17c3eefcfdab35acfb616b' => __DIR__ . '/../..' . '/bootstrap/function.php',
     );
 
     public static $prefixLengthsPsr4 = array (
+        'N' => 
+        array (
+            'Noodlehaus\\' => 11,
+        ),
         'A' => 
         array (
             'App\\' => 4,
@@ -18,6 +23,10 @@ class ComposerStaticInitfc00c18c9adf75cbdff824c31edaeda3
     );
 
     public static $prefixDirsPsr4 = array (
+        'Noodlehaus\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/hassankhan/config/src',
+        ),
         'App\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app',

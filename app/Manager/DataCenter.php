@@ -7,6 +7,7 @@ namespace App\Manager;
 
 use App\Lib\Redis;
 use App\Model\Player;
+
 class DataCenter
 {
     public static $global;
@@ -23,6 +24,11 @@ class DataCenter
         }
     }
 
+    /**
+     * 初始化数据中心
+     *
+     * @desc initDataCenter
+     */
     public static function initDataCenter()
     {
         $player_id_table        = self::PREFIX_KEY . ':player_id';
@@ -49,6 +55,8 @@ class DataCenter
 
     /**
      * 推送玩家到匹配队列
+     *
+     *
      * @param $playerId
      */
     public static function pushPlayerToWaitList($playerId, $playerType = 0)
@@ -63,6 +71,8 @@ class DataCenter
 
     /**
      * 随机从追赶者等待队列中弹出一个玩家
+     *
+     *
      * @return int
      */
     public static function popPlayerFromWaitSeekList()
@@ -73,6 +83,8 @@ class DataCenter
 
     /**
      * 随机从隐藏者等待队列中弹出一个玩家
+     *
+     *
      * @return int
      */
     public static function popPlayerFromWaitHideList()
