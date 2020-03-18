@@ -47,7 +47,30 @@ HideAndSeek
 
 # 应用启动
 
+# 非docker方式启动应用
+
+> 依赖环境
+- PHP >= 7.0
+- swoole 拓展
+- redis 拓展
+
+`config/app.json` 中redis配置项修改为你的redis地址
+
 进入根目录
 ```php
 php service
 ```
+
+# docker 方式
+
+> 以来环境
+- docker
+- docker-composer
+
+进入根目录
+```php
+docker-composer up -d(可选,后台运行)
+```
+
+
+

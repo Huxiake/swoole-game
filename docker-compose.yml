@@ -1,0 +1,31 @@
+version: "3"
+services:
+  redis:
+    container_name: redis-game
+    image: redis:latest
+    volumes:
+      - ./redis.conf:/etc/redis/redis.conf
+    command: redis-server /etc/redis/redis.conf
+    ports:
+      - 6379:6379
+    networks:
+      - hide-and-seed-game
+  swoole-game:
+    container_name: hide-and-seek
+    image: slairmy/swoole:dev
+    depends_on:
+      - redis
+    links:
+      - redis
+    volumes:
+      - .:/app
+    command: php service
+    ports:
+      - 8501:8501
+      - 8502:8502
+    networks:
+      - hide-and-seed-game
+networks:
+  hide-and-seed-game:
+    driver: bridge
+
