@@ -30,6 +30,8 @@ HideAndSeek
 │   └── index.html
 ├── composer.json
 ├── composer.lock
+├── docker-compose.yml          # 容器启动文件
+├── redis.conf                  # 容器启动需要的redis配置信息
 ├── service                     # 服务启动入口
 └── vendor
     ├── autoload.php
@@ -63,7 +65,7 @@ php service
 
 # docker 方式
 
-> 以来环境
+> 依赖环境
 - docker
 - docker-composer
 
@@ -71,6 +73,10 @@ php service
 ```php
 docker-composer up -d(可选,后台运行)
 ```
+
+# License
+
+MIT
 
 
 
